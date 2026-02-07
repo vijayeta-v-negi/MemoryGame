@@ -1,66 +1,89 @@
+const gameBoard = document.getElementById("gameBoard");
+const restartBtn = document.getElementById("restartBtn");
 
-let cards = ["😀","😀","😂","😂","😈","😈","😍","😍"];
+const icons = ["🍎", "🍌", "🍇", "🍒", "🍍", "🥝", "🍉", "🍓"];
+
+let cards = [];
 let firstCard = null;
 let secondCard = null;
-let blockClick = false;
+let lockBoard = false;
 
-/* Shuffle cards */
-cards.sort(() => 0.5 - Math.random());
-
-let board = document.getElementById("board");
-
-/* Create cards */
-for (let i = 0; i < cards.length; i++) {
-  let div = document.createElement("div");
-  div.className = "card";
-  div.dataset.value = cards[i];
-  div.innerText = "?";
-
-  div.onclick = function () {
-    flipCard(this);
-  };
-
-  board.appendChild(div);
-}
-
-/* Flip card */
-function flipCard(card) {
-  if (blockClick) return;
-  if (card === firstCard) return;
-
-  card.innerText = card.dataset.value;
-  card.classList.add("open");
-
-  if (firstCard == null) {
-    firstCard = card;
-  } else {
-    secondCard = card;
-    blockClick = true;
-    checkMatch();
+/* Shuffle Function (Fisher-Yates) */
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
   }
 }
 
-/* Check match */
+/* Create Cards */
+function createBoard() {
+  gameBoard.innerHTML = "";
+  cards = [...icons, ...icons];
+  shuffle(cards);
+
+  cards.forEach(icon => {
+    const card = document.createElement("div");
+    card.classList.add("card");
+    card.dataset.icon = icon;
+
+    card.innerHTML = `
+      <div class="card-face card-front">?</div>
+      <div class="card-face card-back">${icon}</div>
+    `;
+
+    card.addEventListener("click", flipCard);
+    gameBoard.appendChild(card);
+  });
+}
+
+/* Flip Card Logic */
+function flipCard() {
+  if (lockBoard || this === firstCard) return;
+
+  this.classList.add("flip");
+
+  if (!firstCard) {
+    firstCard = this;
+    return;
+  }
+
+  secondCard = this;
+  checkMatch();
+}
+
+/* Match Check */
 function checkMatch() {
-  if (firstCard.dataset.value === secondCard.dataset.value) {
-    firstCard = null;
-    secondCard = null;
-    blockClick = false;
-  } else {
-    setTimeout(function () {
-      firstCard.innerText = "?";
-      secondCard.innerText = "?";
-      firstCard.classList.remove("open");
-      secondCard.classList.remove("open");
+  const isMatch = firstCard.dataset.icon === secondCard.dataset.icon;
 
-      firstCard = null;
-      secondCard = null;
-      blockClick = false;
-    }, 800);
-  }
+  isMatch ? disableCards() : unflipCards();
 }
 
-/* Restart */
-function restartGame() {
-  location.reload();
+/* Keep matched cards open */
+function disableCards() {
+  firstCard.removeEventListener("click", flipCard);
+  secondCard.removeEventListener("click", flipCard);
+  resetBoard();
 }
+
+/* Flip back if not matched */
+function unflipCards() {
+  lockBoard = true;
+
+  setTimeout(() => {
+    firstCard.classList.remove("flip");
+    secondCard.classList.remove("flip");
+    resetBoard();
+  }, 800);
+}
+
+/* Reset selection */
+function resetBoard() {
+  [firstCard, secondCard, lockBoard] = [null, null, false];
+}
+
+/* Restart Game */
+restartBtn.addEventListener("click", createBoard);
+
+/* Start Game */
+createBoard();
